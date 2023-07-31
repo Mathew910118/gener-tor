@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33723.286
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "generátor", "generátor\generátor.csproj", "{DAF824BE-C775-4F26-B358-6A65F7D75249}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DAF824BE-C775-4F26-B358-6A65F7D75249}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAF824BE-C775-4F26-B358-6A65F7D75249}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAF824BE-C775-4F26-B358-6A65F7D75249}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAF824BE-C775-4F26-B358-6A65F7D75249}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B8B0B18F-A942-4A09-A99F-24B033B7A9C2}
+	EndGlobalSection
+EndGlobal
