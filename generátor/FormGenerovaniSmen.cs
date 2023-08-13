@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -13,13 +15,34 @@ namespace generátor
     {
         private List<Policista> seznamPolicistu;
         private List<string> povoleneRole;
+        private ComboBox cmbYear;
+        private ComboBox cmbMonth;
+
 
         public FormGenerovaniSmen()
         {
             InitializeComponent();
 
             seznamPolicistu = new List<Policista>();
-            povoleneRole = new List<string> { "prvosled", "kyselka", "hlídkař", "zpracovatel", "okrskář", "pomocník", "dozorčí" };
+            povoleneRole = new List<string> { "prvosled denní", "prvosled noční", "kyselka denní", "kyselka noční", "hlídkař", "zpracovatel", "okrskář", "pomocník", "dozorčí denní", "dozorčí noční" };
+
+            // Initialize ComboBoxes for year and month selection
+            cmbYear = new ComboBox();
+            cmbYear.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbYear.Items.AddRange(Enumerable.Range(DateTime.Now.Year - 10, 20).Select(year => year.ToString()).ToArray());
+            cmbYear.SelectedIndex = 10; // Default selection to current year
+            cmbYear.Location = new Point(10, 10); // Adjust the location as needed
+            this.Controls.Add(cmbYear);
+
+            cmbMonth = new ComboBox();
+            cmbMonth.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbMonth.Items.AddRange(CultureInfo.CurrentCulture.DateTimeFormat.MonthNames.Take(12).ToArray());
+            cmbMonth.SelectedIndex = DateTime.Now.Month - 1; // Default selection to current month
+            cmbMonth.Location = new Point(150, 10); // Adjust the location as needed
+            this.Controls.Add(cmbMonth);
+
+            cmbYear.SelectedIndexChanged += new EventHandler(cmbMonth_SelectedIndexChanged);
+            cmbMonth.SelectedIndexChanged += new EventHandler(cmbMonth_SelectedIndexChanged);
         }
 
         private bool NacistDataZeSouboru()
@@ -60,53 +83,144 @@ namespace generátor
             return false;
         }
 
+        private double CalculateTotalHours(int year, int month)
+        {
+            int daysInMonth = DateTime.DaysInMonth(year, month);
+            int saturdays = Enumerable.Range(1, daysInMonth)
+                                      .Count(d => new DateTime(year, month, d).DayOfWeek == DayOfWeek.Saturday);
+            int sundays = Enumerable.Range(1, daysInMonth)
+                                    .Count(d => new DateTime(year, month, d).DayOfWeek == DayOfWeek.Sunday);
+            double totalHours = (daysInMonth - saturdays - sundays) * 7.5;
+            return totalHours;
+        }
+
+
         private void ZobrazitDataVDataGridView()
         {
             dataGridView1.Rows.Clear();
 
-            int currentYear = DateTime.Now.Year;
-            int currentMonth = DateTime.Now.Month;
+            int selectedYear = int.Parse(cmbYear.SelectedItem.ToString());
+            int selectedMonth = cmbMonth.SelectedIndex + 1;
 
             foreach (Policista policista in seznamPolicistu)
             {
                 DataGridViewRow row = new DataGridViewRow();
                 row.CreateCells(dataGridView1);
 
-                // Zobrazit jméno a hodnost
                 row.Cells[0].Value = policista.Jmeno;
                 row.Cells[1].Value = policista.Hodnost;
 
-                // Vypočítat počet hodin, které má odpracovat
-                int daysInMonth = DateTime.DaysInMonth(currentYear, currentMonth);
-                int saturdays = Enumerable.Range(1, daysInMonth)
-                                          .Count(d => new DateTime(currentYear, currentMonth, d).DayOfWeek == DayOfWeek.Saturday);
-                int sundays = Enumerable.Range(1, daysInMonth)
-                                        .Count(d => new DateTime(currentYear, currentMonth, d).DayOfWeek == DayOfWeek.Sunday);
-                double totalHours = (daysInMonth - saturdays - sundays) * 7.5;
+                double totalHours = CalculateTotalHours(selectedYear, selectedMonth);
                 row.Cells[2].Value = totalHours;
 
-                // Zobrazit počty služeb pro každou roli
-                foreach (DataGridViewColumn column in dataGridView1.Columns.Cast<DataGridViewColumn>().Skip(3))
+                foreach (DataGridViewColumn column in dataGridView1.Columns.Cast<DataGridViewColumn>().Skip(7).Take(10))
                 {
                     string role = column.HeaderText;
                     bool maRoli = policista.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()));
 
                     if (maRoli && povoleneRole.Contains(role.ToLower()))
                     {
-                        // Pokud má policista roli, zobrazíme 0
                         row.Cells[column.Index].Value = 0;
                     }
                     else
                     {
-                        // Pokud nemá roli nebo je role zakázaná, zobrazíme "N/A" a buňku nastavíme jako neaktivní
                         row.Cells[column.Index].Value = "N/A";
                         row.Cells[column.Index].ReadOnly = true;
                     }
                 }
 
+                // ...
+
                 dataGridView1.Rows.Add(row);
             }
+
+            RozdeleniSluzebProDulezite(selectedMonth); // Volání funkce pro rovnoměrné rozdělení čísla 60
+            CalculateAndDisplaySum(); // Volání funkce pro výpočet a zobrazení sumy
         }
+
+        private void RozdeleniSluzebProDulezite(int selectedMonth)
+        {
+            int cislo60 = DateTime.DaysInMonth(DateTime.Now.Year, selectedMonth) * 2;
+
+            for (int columnIndex = 3; columnIndex < dataGridView1.Columns.Count; columnIndex++)
+            {
+                string role = dataGridView1.Columns[columnIndex].HeaderText;
+
+                // Zjistěte, kolik policistů má tuto roli
+                var policisteSRoli = seznamPolicistu.Where(p => p.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()))).ToList();
+                int pocetPolicistuSRoli = policisteSRoli.Count;
+
+                if (pocetPolicistuSRoli == 0) // Pokud žádný policista nemá tuto roli, přeskočte zpracování tohoto sloupce
+                    continue;
+
+                int zaokrouhlenyPrumerNahoru = (int)Math.Ceiling((double)cislo60 / pocetPolicistuSRoli);
+                int zaokrouhlenyPrumerDolu = (int)Math.Floor((double)cislo60 / pocetPolicistuSRoli);
+
+                int pocetPolicistuNahoru = Math.Max(0, cislo60 - (zaokrouhlenyPrumerDolu * pocetPolicistuSRoli));
+
+                int rozdeleno = 0; // pomocná proměnná pro sledování, kolik hodnot bylo již přiděleno
+
+                foreach (DataGridViewRow row in dataGridView1.Rows)
+                {
+                    if (row.Cells[0].Value == null) continue;
+
+                    string jmeno = row.Cells[0].Value.ToString();
+                    Policista policista = seznamPolicistu.Find(p => p.Jmeno == jmeno);
+
+                    if (policista == null) continue;
+
+                    bool maRoli = policista.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()));
+
+                    if (maRoli)
+                    {
+                        int hodnota = rozdeleno < pocetPolicistuNahoru ? zaokrouhlenyPrumerNahoru : zaokrouhlenyPrumerDolu;
+                        row.Cells[columnIndex].Value = hodnota;
+                        rozdeleno++;
+                    }
+                    else
+                    {
+                        row.Cells[columnIndex].Value = "N/A";
+                        row.Cells[columnIndex].ReadOnly = true;
+                    }
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+        private void CalculateAndDisplaySum()
+        {
+            int rowCount = dataGridView1.Rows.Count;
+
+            for (int columnIndex = 3; columnIndex <= 9; columnIndex++) // sloupce 4 až 10
+            {
+                double sum = 0;
+                for (int rowIndex = 0; rowIndex < rowCount - 1; rowIndex++) // poslední řádek je pro součet
+                {
+                    if (dataGridView1.Rows[rowIndex].Cells[columnIndex].Value != null)
+                    {
+                        double cellValue;
+                        if (double.TryParse(dataGridView1.Rows[rowIndex].Cells[columnIndex].Value.ToString(), out cellValue))
+                        {
+                            sum += cellValue;
+                        }
+                    }
+                }
+                dataGridView1.Rows[rowCount - 1].Cells[columnIndex].Value = sum;
+            }
+        }
+
+
+
+
 
         private void btnNacistData_Click(object sender, EventArgs e)
         {
@@ -214,6 +328,10 @@ namespace generátor
                 {
                     try
                     {
+                        // Get selected year and month
+                        int selectedYear = int.Parse(cmbYear.SelectedItem.ToString());
+                        int selectedMonth = cmbMonth.SelectedIndex + 1; // ComboBox uses 0-based indexing
+
                         // Načtení dat ze souboru CSV s oddělovačem středníkem
                         DataTable dataTable = new DataTable();
                         using (StreamReader sr = new StreamReader(openFileDialog.FileName))
@@ -236,9 +354,7 @@ namespace generátor
                             }
                         }
 
-                        int month = DateTime.Now.Month;
-                        int year = DateTime.Now.Year;
-                        int daysInMonth = DateTime.DaysInMonth(year, month);
+                        int daysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
 
                         FileInfo newFile = new FileInfo("Generated_Schedule.xlsx");
                         using (ExcelPackage package = new ExcelPackage(newFile))
@@ -251,9 +367,8 @@ namespace generátor
                             worksheet.Cells[1, 3].Value = "Pocet hodin";
                             worksheet.Cells[1, 4].Value = "Role";
 
-                            // Získání všech dnů v aktuálním měsíci a uložení do Excelu
-                            DateTime firstDayOfMonth = new DateTime(year, month, 1);
-                            DateTime lastDayOfMonth = new DateTime(year, month, daysInMonth);
+                            // Získání všech dnů v zvoleném měsíci a uložení do Excelu
+                            DateTime firstDayOfMonth = new DateTime(selectedYear, selectedMonth, 1);
                             for (int i = 0; i < daysInMonth; i++)
                             {
                                 worksheet.Cells[1, i + 5].Value = firstDayOfMonth.AddDays(i).ToShortDateString();
@@ -293,6 +408,7 @@ namespace generátor
                 }
             }
         }
+
 
         private void OzancitPrvosledPolicisty(DataTable dataTable, ExcelWorksheet worksheet)
         {
@@ -361,81 +477,25 @@ namespace generátor
             }
         }
 
-
-        private DataTable GeneratePrvosledSchedule(DataTable dataTable, int daysInMonth)
+        private void cmbMonth_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Vytvoření nové tabulky pro výsledné plánování
-            DataTable scheduleTable = new DataTable();
-            scheduleTable.Columns.Add("Jmeno policisty");
-            scheduleTable.Columns.Add("Hodnost");
-            scheduleTable.Columns.Add("Pocet hodin");
-
-            // Počet denních služeb a nočních služeb pro jednoho policistu
-            int dailyServicesPerMonth = daysInMonth / 2; // Celkový počet dní v měsíci je rozdělen na polovinu pro denní a noční služby
-
-            // Seznam policistů s rolí "Prvosled"
-            List<DataRow> prvoslouziPoliciste = new List<DataRow>();
-            foreach (DataRow row in dataTable.Rows)
-            {
-                if (row["Role"].ToString().Contains("Prvosled"))
-                {
-                    prvoslouziPoliciste.Add(row);
-                }
-            }
-
-            // Počet policistů s rolí "Prvosled"
-            int pocetPrvosledPolicistu = prvoslouziPoliciste.Count;
-
-            // Počet policistů pro denní a noční službu (2 denní a 2 noční)
-            int pocetPolicistuDenniSluzba = pocetPrvosledPolicistu / 2;
-            int pocetPolicistuNocniSluzba = pocetPrvosledPolicistu - pocetPolicistuDenniSluzba;
-
-            // Kontrola, zda lze plánovat denní a noční služby
-            if (pocetPolicistuDenniSluzba < 2 || pocetPolicistuNocniSluzba < 2)
-            {
-                throw new Exception("Nedostatek policistů s rolí 'Prvosled' pro plánování denních a nočních služeb.");
-            }
-
-            // Generování sloupců pro policisty s rolí "Prvosled" podle pravidel
-            foreach (DataRow row in prvoslouziPoliciste)
-            {
-                string jmeno = row["Jmeno"].ToString();
-                string hodnost = row["Hodnost"].ToString();
-                string pocetHodin = row["Pocet hodin"].ToString();
-
-                DataRow scheduleRow = scheduleTable.NewRow();
-                scheduleRow["Jmeno policisty"] = jmeno;
-                scheduleRow["Hodnost"] = hodnost;
-                scheduleRow["Pocet hodin"] = pocetHodin;
-
-                // Generování sloupců pro denní a noční službu pro policistu
-                int pocetDenniSluzby = 0;
-                int pocetNocniSluzby = 0;
-
-                for (int i = 0; i < daysInMonth; i++)
-                {
-                    // Podle pravidel zajistíme, že každý den budou 4 policisté v práci (2 denní a 2 noční služby)
-                    if (pocetDenniSluzby < dailyServicesPerMonth / 2)
-                    {
-                        scheduleRow[i + 3] = "Denni sluzba";
-                        pocetDenniSluzby++;
-                    }
-                    else if (pocetNocniSluzby < dailyServicesPerMonth / 2)
-                    {
-                        scheduleRow[i + 3] = "Nocni sluzba";
-                        pocetNocniSluzby++;
-                    }
-                    else
-                    {
-                        scheduleRow[i + 3] = "Volno";
-                    }
-                }
-
-                scheduleTable.Rows.Add(scheduleRow);
-            }
-
-            return scheduleTable;
+            ZobrazitDataVDataGridView();
         }
+
+        private int GetNumberOfPolicemenWithRole(List<Policista> seznamPolicistu, string role)
+        {
+            int count = 0;
+            foreach (Policista policista in seznamPolicistu)
+            {
+                bool hasRole = policista.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()));
+                if (hasRole)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
 
     }
 }

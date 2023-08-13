@@ -72,7 +72,15 @@ namespace generátor
                     {
                         foreach (Policista policista in seznamPolicistu)
                         {
-                            string roles = string.Join(";", policista.Role.ToArray());
+                            List<string> newRoles = new List<string>(policista.Role);
+
+                            // Přidáme nové role podle podmínek
+                            AddNewRoleIfExist(newRoles, "prvosled", "prvosled denní", "prvosled noční");
+                            AddNewRoleIfExist(newRoles, "kyselka", "kyselka denní", "kyselka noční");
+                            AddNewRoleIfExist(newRoles, "dozorčí", "dozorčí denní", "dozorčí noční");
+
+                            string roles = string.Join(";", newRoles);
+
                             sw.WriteLine($"{policista.Jmeno},{policista.Hodnost},{roles}");
                         }
                     }
@@ -81,6 +89,17 @@ namespace generátor
 
             MessageBox.Show("Data byla úspěšně uložena do souboru.");
         }
+
+        private void AddNewRoleIfExist(List<string> roleList, string existingRole, params string[] newRoles)
+        {
+            if (roleList.Any(role => role.Trim() == existingRole))
+            {
+                roleList.AddRange(newRoles);
+            }
+        }
+
+
+
 
 
 
@@ -169,33 +188,5 @@ namespace generátor
             // Aktualizovat zobrazení v DataGridView
             ZobrazitDataVDataGridView();
         }
-
-
-
-
-        private void PridatPolicistu_Click(object sender, EventArgs e)
-        {
-            // Získání hodnot z DataGridView pro nového policistu
-            string jmeno = dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells["Jmeno"].Value?.ToString();
-            string hodnost = dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells["Hodnost"].Value?.ToString();
-            string role = dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells["Role"].Value?.ToString();
-
-            // Pokud jsou všechna pole vyplněná, přidáme nového policistu do seznamu
-            if (!string.IsNullOrEmpty(jmeno) && !string.IsNullOrEmpty(hodnost) && !string.IsNullOrEmpty(role))
-            {
-                List<string> roleList = role.Split(',').Select(r => r.Trim()).ToList();
-                Policista novyPolicista = new Policista(jmeno, hodnost, roleList);
-                seznamPolicistu.Add(novyPolicista);
-
-                // Aktualizujte zobrazení v DataGridView
-                ZobrazitDataVDataGridView();
-            }
-            else
-            {
-                MessageBox.Show("Vyplňte všechna pole pro nového policistu.", "Chyba", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-
     }
 }

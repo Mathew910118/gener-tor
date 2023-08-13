@@ -34,11 +34,9 @@
             this.Hodnost = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Role = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.formSeznamPolicistuBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.formSeznamPolicistuBindingSource1 = new System.Windows.Forms.BindingSource(this.components);
             this.btnUlozitZmeny = new System.Windows.Forms.Button();
             this.btnNacistData = new System.Windows.Forms.Button();
-            this.PridatPolicistu = new System.Windows.Forms.Button();
-            this.formSeznamPolicistuBindingSource1 = new System.Windows.Forms.BindingSource(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.formSeznamPolicistuBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.formSeznamPolicistuBindingSource1)).BeginInit();
@@ -80,17 +78,9 @@
             // 
             this.formSeznamPolicistuBindingSource.DataSource = this.formSeznamPolicistuBindingSource1;
             // 
-            // comboBox1
+            // formSeznamPolicistuBindingSource1
             // 
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Items.AddRange(new object[] {
-            "nstržm",
-            "pprap",
-            "prap"});
-            this.comboBox1.Location = new System.Drawing.Point(1067, 51);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(121, 21);
-            this.comboBox1.TabIndex = 1;
+            this.formSeznamPolicistuBindingSource1.DataSource = typeof(generátor.FormSeznamPolicistu);
             // 
             // btnUlozitZmeny
             // 
@@ -112,29 +102,13 @@
             this.btnNacistData.UseVisualStyleBackColor = true;
             this.btnNacistData.Click += new System.EventHandler(this.btnNacistData_Click);
             // 
-            // PridatPolicistu
-            // 
-            this.PridatPolicistu.Location = new System.Drawing.Point(1067, 158);
-            this.PridatPolicistu.Name = "PridatPolicistu";
-            this.PridatPolicistu.Size = new System.Drawing.Size(107, 23);
-            this.PridatPolicistu.TabIndex = 4;
-            this.PridatPolicistu.Text = "Přidat policistu";
-            this.PridatPolicistu.UseVisualStyleBackColor = true;
-            this.PridatPolicistu.Click += new System.EventHandler(this.PridatPolicistu_Click);
-            // 
-            // formSeznamPolicistuBindingSource1
-            // 
-            this.formSeznamPolicistuBindingSource1.DataSource = typeof(generátor.FormSeznamPolicistu);
-            // 
             // FormSeznamPolicistu
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1333, 450);
-            this.Controls.Add(this.PridatPolicistu);
             this.Controls.Add(this.btnNacistData);
             this.Controls.Add(this.btnUlozitZmeny);
-            this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.dataGridView1);
             this.Name = "FormSeznamPolicistu";
             this.Text = "FormSeznamPolicistu";
@@ -148,7 +122,6 @@
         #endregion
 
         private System.Windows.Forms.DataGridView dataGridView1;
-        private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.Button btnUlozitZmeny;
         private System.Windows.Forms.Button btnNacistData;
         private System.Windows.Forms.BindingSource formSeznamPolicistuBindingSource;
@@ -156,6 +129,5 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Jmeno;
         private System.Windows.Forms.DataGridViewTextBoxColumn Hodnost;
         private System.Windows.Forms.DataGridViewTextBoxColumn Role;
-        private System.Windows.Forms.Button PridatPolicistu;
     }
 }
