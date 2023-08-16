@@ -43,6 +43,9 @@ namespace generátor
 
             cmbYear.SelectedIndexChanged += new EventHandler(cmbMonth_SelectedIndexChanged);
             cmbMonth.SelectedIndexChanged += new EventHandler(cmbMonth_SelectedIndexChanged);
+
+            dataGridView1.CellValueChanged += dataGridView1_CellValueChanged;
+
         }
 
         private bool NacistDataZeSouboru()
@@ -113,68 +116,60 @@ namespace generátor
                 double totalHours = CalculateTotalHours(selectedYear, selectedMonth);
                 row.Cells[2].Value = totalHours;
 
-                foreach (DataGridViewColumn column in dataGridView1.Columns.Cast<DataGridViewColumn>().Skip(7).Take(10))
-                {
-                    string role = column.HeaderText;
-                    bool maRoli = policista.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()));
-
-                    if (maRoli && povoleneRole.Contains(role.ToLower()))
-                    {
-                        row.Cells[column.Index].Value = 0;
-                    }
-                    else
-                    {
-                        row.Cells[column.Index].Value = "N/A";
-                        row.Cells[column.Index].ReadOnly = true;
-                    }
-                }
-
-                // ...
-
+                
                 dataGridView1.Rows.Add(row);
             }
 
             RozdeleniSluzebProDulezite(selectedMonth); // Volání funkce pro rovnoměrné rozdělení čísla 60
             CalculateAndDisplaySum(); // Volání funkce pro výpočet a zobrazení sumy
+            SecteniHodnotVRadku();
         }
 
         private void RozdeleniSluzebProDulezite(int selectedMonth)
         {
             int cislo60 = DateTime.DaysInMonth(DateTime.Now.Year, selectedMonth) * 2;
 
-            for (int columnIndex = 3; columnIndex < dataGridView1.Columns.Count; columnIndex++)
+            for (int columnIndex = 3; columnIndex < 9; columnIndex++)
             {
-                string role = dataGridView1.Columns[columnIndex].HeaderText;
+                if (columnIndex == 7 || columnIndex == 8)
+                {
+                    cislo60 = DateTime.DaysInMonth(DateTime.Now.Year, selectedMonth);
+                }
 
-                // Zjistěte, kolik policistů má tuto roli
-                var policisteSRoli = seznamPolicistu.Where(p => p.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()))).ToList();
+                string role = dataGridView1.Columns[columnIndex].HeaderText.ToLower();
+
+                // Filtrujeme seznam policistů, kteří mají danou roli.
+                var policisteSRoli = seznamPolicistu.Where(p => p.Role.Any(r => r.Split(';').Any(part => part.Trim().ToLower() == role))).ToList();
+
                 int pocetPolicistuSRoli = policisteSRoli.Count;
 
-                if (pocetPolicistuSRoli == 0) // Pokud žádný policista nemá tuto roli, přeskočte zpracování tohoto sloupce
+                if (pocetPolicistuSRoli == 0)
+                {
+                    foreach (DataGridViewRow row in dataGridView1.Rows)
+                    {
+                        row.Cells[columnIndex].Value = "N/A";
+                        row.Cells[columnIndex].ReadOnly = true;
+                    }
                     continue;
+                }
 
                 int zaokrouhlenyPrumerNahoru = (int)Math.Ceiling((double)cislo60 / pocetPolicistuSRoli);
                 int zaokrouhlenyPrumerDolu = (int)Math.Floor((double)cislo60 / pocetPolicistuSRoli);
 
-                int pocetPolicistuNahoru = Math.Max(0, cislo60 - (zaokrouhlenyPrumerDolu * pocetPolicistuSRoli));
+                int pocetPolicistuNahoru = cislo60 % pocetPolicistuSRoli; // Zbytkový operátor nám dává počet policistů s hodnotou nahoru.
 
-                int rozdeleno = 0; // pomocná proměnná pro sledování, kolik hodnot bylo již přiděleno
+                int rozdeleno = 0;
 
                 foreach (DataGridViewRow row in dataGridView1.Rows)
                 {
                     if (row.Cells[0].Value == null) continue;
 
                     string jmeno = row.Cells[0].Value.ToString();
-                    Policista policista = seznamPolicistu.Find(p => p.Jmeno == jmeno);
+                    Policista policista = policisteSRoli.Find(p => p.Jmeno == jmeno);
 
-                    if (policista == null) continue;
-
-                    bool maRoli = policista.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()));
-
-                    if (maRoli)
+                    if (policista != null)
                     {
-                        int hodnota = rozdeleno < pocetPolicistuNahoru ? zaokrouhlenyPrumerNahoru : zaokrouhlenyPrumerDolu;
-                        row.Cells[columnIndex].Value = hodnota;
+                        row.Cells[columnIndex].Value = rozdeleno < pocetPolicistuNahoru ? zaokrouhlenyPrumerNahoru : zaokrouhlenyPrumerDolu;
                         rozdeleno++;
                     }
                     else
@@ -187,20 +182,11 @@ namespace generátor
         }
 
 
-
-
-
-
-
-
-
-
-
         private void CalculateAndDisplaySum()
         {
             int rowCount = dataGridView1.Rows.Count;
 
-            for (int columnIndex = 3; columnIndex <= 9; columnIndex++) // sloupce 4 až 10
+            for (int columnIndex = 3; columnIndex <= 8; columnIndex++) // sloupce 4 až 10
             {
                 double sum = 0;
                 for (int rowIndex = 0; rowIndex < rowCount - 1; rowIndex++) // poslední řádek je pro součet
@@ -217,6 +203,12 @@ namespace generátor
                 dataGridView1.Rows[rowCount - 1].Cells[columnIndex].Value = sum;
             }
         }
+
+        private void dataGridView1_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            CalculateAndDisplaySum();
+        }
+
 
 
 
@@ -412,90 +404,159 @@ namespace generátor
 
         private void OzancitPrvosledPolicisty(DataTable dataTable, ExcelWorksheet worksheet)
         {
-            int dayColumnStartIndex = 5; // Index sloupce, od kterého začínají dny (5. sloupec v Excelu)
-            int maxPolicistsPerDay = 4; // Maximální počet policistů na den
-            int maxPolicistsPerType = 2; // Maximální počet policistů pro každý typ služby (denní, noční)
-
-            // Seznam policistů pro denní službu a noční službu
-            List<string> denniSluzbaPoliciste = new List<string>();
-            List<string> nocniSluzbaPoliciste = new List<string>();
-
-            int month = DateTime.Now.Month;
-            int year = DateTime.Now.Year;
-            int daysInMonth = DateTime.DaysInMonth(year, month);
-
-            // Projdeme všechny dny v měsíci a generujeme služby pro každý den
-            for (int day = 1; day <= daysInMonth; day++)
+            // Projděte každý den v měsíci
+            for (int day = 0; day < DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month); day++)
             {
-                // Projdeme všechny řádky datové tabulky
-                for (int row = 0; row < dataTable.Rows.Count; row++)
+                // Nalezneme 2 policisty s rolí "prvosled" z DataTable
+                var prvosledRows = dataTable.AsEnumerable().Where(row => row.Field<string>(3) == "prvosled denní").Take(2).ToList();
+
+                foreach (var row in prvosledRows)
                 {
-                    // Získáme hodnotu ze sloupce "Role" pro aktuální řádek
-                    string role = dataTable.Rows[row]["Role"].ToString();
+                    // Získejte index řádku z DataTable
+                    int rowIndex = dataTable.Rows.IndexOf(row);
 
-                    // Rozdělíme roli pomocí čárky na jednotlivé role
-                    string[] roleList = role.Split(',');
-
-                    // Zkontrolujeme, zda obsahuje roli "Prvosled"
-                    bool hasPrvosled = roleList.Any(r => r.Trim() == "Prvosled");
-
-                    // Pokud má roli "Prvosled", rozdělíme denní službu a noční službu mezi policisty
-                    if (hasPrvosled)
-                    {
-                        string jmeno = dataTable.Rows[row]["Jmeno"].ToString();
-                        string hodnost = dataTable.Rows[row]["Hodnost"].ToString();
-                        double pocetHodin = Convert.ToDouble(dataTable.Rows[row]["Pocet hodin"].ToString());
-
-                        // Pokud policista má ještě nějaké hodiny, které mu zbývá odsloužit, rozdělíme službu
-                        if (pocetHodin > 0)
-                        {
-                            // Rozdělení denní služby a noční služby mezi čtyři policisty
-                            if (denniSluzbaPoliciste.Count < maxPolicistsPerDay && denniSluzbaPoliciste.Count < maxPolicistsPerType)
-                            {
-                                denniSluzbaPoliciste.Add($"{jmeno} ({hodnost})");
-                                worksheet.Cells[row + 2, dayColumnStartIndex + day - 1].Value = "Denni sluzba";
-                                pocetHodin -= 12.5; // Odpočítáme 12.5 hodiny od denní služby
-                                if (pocetHodin < 12) pocetHodin = 0; // Pokud zbyde méně než 0 hodin, nastavíme 0
-                            }
-                            else if (nocniSluzbaPoliciste.Count < maxPolicistsPerDay && nocniSluzbaPoliciste.Count < maxPolicistsPerType)
-                            {
-                                nocniSluzbaPoliciste.Add($"{jmeno} ({hodnost})");
-                                worksheet.Cells[row + 2, dayColumnStartIndex + day - 1].Value = "Nocni sluzba";
-                                pocetHodin -= 12.5; // Odpočítáme 12.5 hodiny od noční služby
-                                if (pocetHodin < 12) pocetHodin = 0; // Pokud zbyde méně než 0 hodin, nastavíme 0
-                            }
-
-                            // Aktualizujeme hodnotu v tabulce "Pocet hodin" po odečtení odpracovaných hodin
-                            dataTable.Rows[row]["Pocet hodin"] = pocetHodin.ToString();
-                        }
-                    }
+                    // Nastavíme hodnotu v Excelu pro označení policisty s rolí "prvosled"
+                    worksheet.Cells[rowIndex + 2, day + 5].Value = "Prvosled denní";
                 }
 
-                // Vyprázdnění seznamů pro denní a noční službu po dokončení generování pro jeden den
-                denniSluzbaPoliciste.Clear();
-                nocniSluzbaPoliciste.Clear();
+                // Pokud byli nalezeni 2 policisté s rolí "prvosled", odstraníme je z DataTable, aby nebyli znovu zvoleni
+                if (prvosledRows.Count == 2)
+                {
+                    dataTable.Rows.Remove(prvosledRows[0]);
+                    dataTable.Rows.Remove(prvosledRows[1]);
+                }
             }
         }
+
+
 
         private void cmbMonth_SelectedIndexChanged(object sender, EventArgs e)
         {
             ZobrazitDataVDataGridView();
         }
 
-        private int GetNumberOfPolicemenWithRole(List<Policista> seznamPolicistu, string role)
+        private void SecteniHodnotVRadku()
         {
-            int count = 0;
-            foreach (Policista policista in seznamPolicistu)
+            foreach (DataGridViewRow row in dataGridView1.Rows)
             {
-                bool hasRole = policista.Role.Any(r => r.Split(';').Select(x => x.Trim().ToLower()).Contains(role.ToLower()));
-                if (hasRole)
+                double total = 0;
+
+                if (row.Cells[3].Value != null && row.Cells[3].Value.ToString() != "N/A")
                 {
-                    count++;
+                    total += Convert.ToDouble(row.Cells[3].Value) * 12.5;
                 }
+
+                if (row.Cells[4].Value != null && row.Cells[4].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[4].Value) * 12.5;
+                }
+
+                if (row.Cells[5].Value != null && row.Cells[5].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[5].Value) * 11;
+                }
+
+                if (row.Cells[6].Value != null && row.Cells[6].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[6].Value) * 11;
+                }
+
+                if (row.Cells[7].Value != null && row.Cells[7].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[7].Value) * 12;
+                }
+
+                if (row.Cells[8].Value != null && row.Cells[8].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[8].Value) * 7.5;
+                }
+
+                if (row.Cells[9].Value != null && row.Cells[9].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[9].Value) * 7.5;
+                }
+
+                if (row.Cells[10].Value != null && row.Cells[10].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[10].Value) * 10;
+                }
+
+                if (row.Cells[11].Value != null && row.Cells[11].Value.ToString() != "N/A")
+                {
+                    total += Convert.ToDouble(row.Cells[11].Value) * 9.5;
+                }
+
+                if (row.Cells[2].Value != null && double.TryParse(row.Cells[2].Value.ToString(), out double hodnotaSloupce2))
+                {
+                    total -= hodnotaSloupce2;
+                }
+
+                row.Cells[14].Value = total;
             }
-            return count;
         }
 
+        private void btnManageShifts_Click(object sender, EventArgs e)
+        {
+            ManageShiftsForm manageShiftsForm = new ManageShiftsForm(seznamPolicistu);
+            manageShiftsForm.ShowDialog(); // Použijte Show() místo ShowDialog(), pokud chcete okno nemodální.
+        }
+
+        private void btnExportToExcel_Click(object sender, EventArgs e)
+        {
+            using (ExcelPackage excel = new ExcelPackage())
+            {
+                ExcelWorksheet ws = excel.Workbook.Worksheets.Add("Směny");
+
+
+
+                // Zapíše policisty a jejich hodnosti
+                for (int i = 0; i < dataGridView1.Rows.Count; i++)
+                {
+                    ws.Cells[i + 2, 1].Value = dataGridView1.Rows[i].Cells["Jmeno"].Value;
+                    ws.Cells[i + 2, 2].Value = dataGridView1.Rows[i].Cells["Hodnost"].Value;
+                }
+
+                // Zapíše aktuální rok a měsíc nad dny
+                DateTime now = DateTime.Now;
+                int daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
+                int middleDayColumn = daysInMonth / 2 + 2;  // vypočítáme střední sloupec
+
+                ws.Cells[1, middleDayColumn].Value = now.ToString("MMMM yyyy", new System.Globalization.CultureInfo("cs-CZ"));
+
+                // Změníme velikost písma pro název měsíce a roku
+                ws.Cells[1, middleDayColumn].Style.Font.Size = 14;
+                ws.Cells[1, middleDayColumn].Style.Font.Bold = true;
+
+                // Pro lepší vizuální efekt spojíme několik buněk pro název měsíce a roku
+                ws.Cells[1, middleDayColumn - 1, 1, middleDayColumn + 1].Merge = true;
+                ws.Cells[1, middleDayColumn - 1, 1, middleDayColumn + 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                // Názvy sloupců: "Jména", "Hodnosti", a dny v měsíci
+                ws.Cells[2, 1].Value = "Jména";
+                ws.Cells[2, 2].Value = "Hodnosti";
+
+                // Zapíše dny v měsíci
+                for (int i = 1; i <= daysInMonth; i++)
+                {
+                    ws.Cells[2, i + 2].Value = $"{i}. {now.ToString("MM")}";  // Vypíše den a měsíc (např. "1. 01")
+                }
+
+                // Uložení souboru
+                SaveFileDialog saveFileDialog = new SaveFileDialog
+                {
+                    FileName = "output.xlsx",
+                    Filter = "Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+                    Title = "Uložit Excel soubor"
+                };
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    FileStream stream = new FileStream(saveFileDialog.FileName, FileMode.Create);
+                    excel.SaveAs(stream);
+                    stream.Close();
+                    MessageBox.Show("Export do Excelu byl úspěšný!");
+                }
+            }
+        }
 
     }
 }

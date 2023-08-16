@@ -123,7 +123,8 @@ namespace generátor
 
         private void btnUlozitZmeny_Click(object sender, EventArgs e)
         {
-            // Načíst všechny existující data z DataGridView a uložit je zpět do seznamu seznamPolicistu
+            seznamPolicistu.Clear();  // Clear the list before repopulating
+
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
                 if (row.IsNewRow) continue; // Ignorovat nový prázdný řádek
@@ -144,12 +145,10 @@ namespace generátor
                 }
             }
 
-            // Aktualizujte zobrazení v DataGridView
             ZobrazitDataVDataGridView();
-
-            // Uložit data do souboru
             UlozitDataDoSouboru();
         }
+
 
 
 
