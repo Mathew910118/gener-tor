@@ -14,6 +14,7 @@ namespace generátor
 {
     public partial class ManageShiftsForm : Form
     {
+        private Shift _currentlyEditingShift;
         private List<Policista> allPolicists;
         private Dictionary<string, bool> checkedState = new Dictionary<string, bool>();
         public const string ShiftsFilePath = "shifts.txt";
@@ -47,6 +48,17 @@ namespace generátor
             }
         }
 
+        private void UpdateShiftList()
+        {
+            if (_currentlyEditingShift != null)
+            {
+                lstShifts.Items.Remove(_currentlyEditingShift.ToString()); // Odebereme původní směnu
+                _currentlyEditingShift = null;
+            }
+
+            System.IO.File.WriteAllLines(ShiftsFilePath, lstShifts.Items.Cast<string>());
+        }
+
         private void txtSearch_TextChanged(object sender, EventArgs e)
         {
             UpdatePolicistList(txtSearch.Text);
@@ -70,7 +82,7 @@ namespace generátor
 
         private void LoadShifts()
         {
-            lstShifts.Items.Clear(); // Předpokládáme, že máte ListBox s názvem lstShifts pro zobrazení seznamu směn
+            lstShifts.Items.Clear();
             var shifts = LoadShiftsFromFile(ShiftsFilePath);
             foreach (var shift in shifts)
             {
@@ -139,8 +151,7 @@ namespace generátor
 
         public void AddShiftToList(Shift shift)
         {
-            lstShifts.Items.Add(shift.Name); // Zde přidáváme název směny do ListBoxu
-                                             // Můžete také přidat další logiku, např. ukládání do databáze nebo kolekce v paměti, atd.
+            lstShifts.Items.Add(shift.ToString()); // Přidáváme kompletní textovou reprezentaci směny do ListBoxu
         }
 
         private void btnEditShift_Click(object sender, EventArgs e)
@@ -153,15 +164,13 @@ namespace generátor
                 return;
             }
 
+            _currentlyEditingShift = selectedShift; // Uložíme si směnu před editací
+
             CreateShiftForm editShiftForm = new CreateShiftForm(this);
-
-            // Nastavíme hodnoty formuláře na základě vybrané směny
             editShiftForm.SetShiftData(selectedShift);
-
             editShiftForm.ShowDialog();
 
-            // Aktualizace souboru shifts.txt
-            System.IO.File.WriteAllLines(ShiftsFilePath, lstShifts.Items.Cast<string>());
+            UpdateShiftList();
         }
 
 
@@ -174,17 +183,26 @@ namespace generátor
 
             string[] parts = selectedShiftString.Split(';');
 
+            if (parts.Length < 4)  // Abychom se ujistili, že máme dostatek částí po rozdělení řetězce.
+                return null;
+
             Shift shift = new Shift
             {
                 Name = parts[0],
-                Dates = parts[1].Split(',').Select(date => DateTime.Parse(date)).ToList(),
-                Length = decimal.Parse(parts[2]),
-                Start = DateTime.Parse(parts[3]),
-                End = DateTime.Parse(parts[4])
+                Length = decimal.Parse(parts[1]),
+                Start = DateTime.Parse(parts[2]),
+                End = DateTime.Parse(parts[3])
             };
 
             return shift;
         }
+
+        public bool DoesShiftNameExist(string shiftName)
+        {
+            return lstShifts.Items.Cast<string>().Any(item => item.StartsWith(shiftName + ";", StringComparison.OrdinalIgnoreCase));
+        }
+
+
 
     }
 }

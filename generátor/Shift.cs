@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Drawing;
 
 namespace generátor
 {
@@ -10,15 +11,18 @@ namespace generátor
     {
         
         public string Name { get; set; }
-        public List<DateTime> Dates { get; set; }
         public decimal Length { get; set; }
         public DateTime Start { get; set; }
         public DateTime End { get; set; }
+        public Color Color { get; set; }
+        public string ColorString { get; set; }
+
 
         public override string ToString()
         {
             // Vrátí textovou reprezentaci směny v požadovaném formátu
-            return $"{Name};{string.Join(",", Dates.Select(d => d.ToString("yyyy-MM-dd")))};{Length};{Start};{End}";
+            return $"{Name};{Length};{Start};{End}";
+
         }
     }
 

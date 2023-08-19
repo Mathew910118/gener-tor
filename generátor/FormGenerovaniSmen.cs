@@ -19,6 +19,9 @@ namespace generátor
         private ComboBox cmbMonth;
 
 
+
+
+
         public FormGenerovaniSmen()
         {
             InitializeComponent();
@@ -491,7 +494,7 @@ namespace generátor
                     total -= hodnotaSloupce2;
                 }
 
-                row.Cells[14].Value = total;
+                row.Cells[15].Value = total;
             }
         }
 
@@ -557,6 +560,49 @@ namespace generátor
                 }
             }
         }
+
+        private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.ColumnIndex == 13)
+            {
+                string cellValue = dataGridView1.CurrentCell.Value?.ToString() ?? "";
+                List<int> existingDays = cellValue.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                                                  .Select(int.Parse)
+                                                  .ToList();
+
+                int selectedYear = int.Parse(cmbYear.SelectedItem.ToString());
+                int selectedMonth = cmbMonth.SelectedIndex + 1;
+
+                using (CalendarForm calendarForm = new CalendarForm(existingDays, int.Parse(cmbYear.SelectedItem.ToString()), cmbMonth.SelectedIndex + 1))
+                {
+                    if (calendarForm.ShowDialog() == DialogResult.OK)
+                    {
+                        List<int> selectedDays = calendarForm.GetSelectedDays();
+                        if (selectedDays.Count > 0)
+                        {
+                            selectedDays.Sort(); // Seřadí dny od nejmenšího k největšímu
+                            string daysString = string.Join(", ", selectedDays);
+                            dataGridView1.CurrentCell.Value = daysString;
+                        }
+                    }
+                    
+                }
+
+            }
+
+            else if (e.ColumnIndex == 14)
+            {
+                using (ShiftsForm shiftsForm = new ShiftsForm())
+                {
+                    shiftsForm.ShowDialog();
+                }
+            }
+        }
+
+
+
+
+
 
     }
 }

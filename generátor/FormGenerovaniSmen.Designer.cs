@@ -42,6 +42,7 @@
             this.Okrskář = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Pomocník = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Hlídkař = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.volno = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ostatni = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.zbyvajici = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.btnNacistData = new System.Windows.Forms.Button();
@@ -70,12 +71,14 @@
             this.Okrskář,
             this.Pomocník,
             this.Hlídkař,
+            this.volno,
             this.ostatni,
             this.zbyvajici});
             this.dataGridView1.Location = new System.Drawing.Point(64, 51);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.Size = new System.Drawing.Size(1006, 301);
             this.dataGridView1.TabIndex = 0;
+            this.dataGridView1.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellDoubleClick);
             // 
             // Jmeno
             // 
@@ -152,6 +155,12 @@
             this.Hlídkař.HeaderText = "Hlídkař";
             this.Hlídkař.Name = "Hlídkař";
             this.Hlídkař.Width = 68;
+            // 
+            // volno
+            // 
+            this.volno.HeaderText = "Požadavky na volno";
+            this.volno.Name = "volno";
+            this.volno.Width = 129;
             // 
             // ostatni
             // 
@@ -239,6 +248,8 @@
         private System.Windows.Forms.Button btnNacistData;
         private System.Windows.Forms.Button btnUlozitDoExcelu;
         private System.Windows.Forms.Button BtnGenerovatSluzbyNaCelyMesic;
+        private System.Windows.Forms.Button btnManageShifts;
+        private System.Windows.Forms.Button btnExportToExcel;
         private System.Windows.Forms.DataGridViewTextBoxColumn Jmeno;
         private System.Windows.Forms.DataGridViewTextBoxColumn Hodnost;
         private System.Windows.Forms.DataGridViewTextBoxColumn PocetHodin;
@@ -252,9 +263,8 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Okrskář;
         private System.Windows.Forms.DataGridViewTextBoxColumn Pomocník;
         private System.Windows.Forms.DataGridViewTextBoxColumn Hlídkař;
+        private System.Windows.Forms.DataGridViewTextBoxColumn volno;
         private System.Windows.Forms.DataGridViewTextBoxColumn ostatni;
         private System.Windows.Forms.DataGridViewTextBoxColumn zbyvajici;
-        private System.Windows.Forms.Button btnManageShifts;
-        private System.Windows.Forms.Button btnExportToExcel;
     }
 }

@@ -21,8 +21,6 @@ namespace generátor
 
             // Nastavení výchozích hodnot
             txtShiftName.Text = "Default Shift Name";
-            monthCalendar1.SelectionStart = DateTime.Now;  // dnešní datum
-            monthCalendar1.SelectionEnd = DateTime.Now;    // dnešní datum
             numericUpDownShiftLength.Value = 8;  // výchozí délka směny
             dateTimePickerStart.Value = DateTime.Now;
             dateTimePickerEnd.Value = DateTime.Now.AddHours(8); // +8 hodin od aktuálního času
@@ -32,11 +30,14 @@ namespace generátor
         private void btnCreateShift_Click(object sender, EventArgs e)
         {
             string shiftName = txtShiftName.Text;
-            List<DateTime> selectedDates = new List<DateTime>();
-            for (DateTime date = monthCalendar1.SelectionStart; date <= monthCalendar1.SelectionEnd; date = date.AddDays(1))
+
+            // Kontrola existence názvu směny
+            if (_manageShiftForm.DoesShiftNameExist(shiftName))
             {
-                selectedDates.Add(date);
+                MessageBox.Show("Směna s tímto názvem již existuje. Zvolte jiný název.", "Chyba", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
+
             decimal shiftLength = numericUpDownShiftLength.Value;
             DateTime startTime = dateTimePickerStart.Value;
             DateTime endTime = dateTimePickerEnd.Value;
@@ -45,7 +46,6 @@ namespace generátor
             Shift newShift = new Shift
             {
                 Name = shiftName,
-                Dates = selectedDates,
                 Length = shiftLength,
                 Start = startTime,
                 End = endTime
@@ -58,16 +58,13 @@ namespace generátor
             this.Close();
         }
 
+
         public void SetShiftData(Shift shift)
         {
             txtShiftName.Text = shift.Name;
-            monthCalendar1.SelectionStart = shift.Dates.First();
-            monthCalendar1.SelectionEnd = shift.Dates.Last();
             numericUpDownShiftLength.Value = shift.Length;
             dateTimePickerStart.Value = shift.Start;
             dateTimePickerEnd.Value = shift.End;
         }
-
     }
 }
-
